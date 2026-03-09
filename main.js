@@ -1,61 +1,121 @@
-/**
- * Maze OS — Browser Module
- * Handles Safari-like browser window functionality
- */
+const { app, BrowserWindow, ipcMain, screen, Menu, session } = require('electron');
+const path = require('path');
+const fs = require('fs');
 
-(function() {
-  const webview = document.getElementById('browser-webview');
-  if (!webview) return;
+let mainWindow;
+const storagePath = path.join(__dirname, 'src', 'macos-storage.json');
 
-  // Wait for webview to be ready
-  webview.addEventListener('dom-ready', () => {
-    // Update address bar when webview navigates
-    webview.addEventListener('did-navigate', e => {
-      const urlInput = document.getElementById('browser-url');
-      if (urlInput && e.url) urlInput.value = e.url;
-    });
+function isFirstBoot() {
+  try {
+    if (fs.existsSync(storagePath)) {
+      const data = JSON.parse(fs.readFileSync(storagePath, 'utf8'));
+      return !data.setupComplete;
+    }
+  } catch (e) {}
+  return true;
+}
 
-    webview.addEventListener('did-navigate-in-page', e => {
-      const urlInput = document.getElementById('browser-url');
-      if (urlInput && e.url && e.isMainFrame) urlInput.value = e.url;
-    });
+function readStorage() {
+  try {
+    if (fs.existsSync(storagePath)) {
+      return JSON.parse(fs.readFileSync(storagePath, 'utf8'));
+    }
+  } catch (e) {}
+  return {};
+}
 
-    webview.addEventListener('page-title-updated', e => {
-      const titleEl = document.querySelector('#win-browser .win-title');
-      if (titleEl) titleEl.textContent = e.title || 'Safari';
-    });
+function writeStorage(data) {
+  fs.writeFileSync(storagePath, JSON.stringify(data, null, 2));
+}
 
-    webview.addEventListener('did-start-loading', () => {
-      const btn = document.querySelector('#win-browser .browser-navbtn[onclick="browserRefresh()"]');
-      if (btn) btn.textContent = '✕';
-    });
-
-    webview.addEventListener('did-stop-loading', () => {
-      const btn = document.querySelector('#win-browser .browser-navbtn[onclick="browserRefresh()"]');
-      if (btn) btn.textContent = '↻';
-      // Update URL bar after load
-      const urlInput = document.getElementById('browser-url');
-      if (urlInput && webview.getURL) urlInput.value = webview.getURL();
-    });
-
-    webview.addEventListener('did-fail-load', (e) => {
-      if (e.errorCode === -3) return; // Ignore aborted
-      const container = document.getElementById('browser-content');
-      // Show friendly error page
-      const errDiv = document.createElement('div');
-      errDiv.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;gap:12px;font-family:system-ui';
-      errDiv.innerHTML = `
-        <div style="font-size:48px">🌐</div>
-        <div style="font-size:18px;font-weight:600;color:#1d1d1f">Can't connect to this page</div>
-        <div style="font-size:13px;color:#6e6e73">${e.validatedURL}</div>
-        <button onclick="this.parentElement.remove();browserRefresh()" 
-          style="margin-top:8px;padding:8px 20px;border-radius:8px;border:none;background:#0071e3;color:white;font-size:14px;cursor:pointer">
-          Try Again
-        </button>`;
-      container.appendChild(errDiv);
-      setTimeout(() => errDiv.remove(), 5000);
-    });
+function createWindow() {
+  mainWindow = new BrowserWindow({
+    width: 1440,
+    height: 900,
+    minWidth: 1024,
+    minHeight: 700,
+    frame: false,
+    titleBarStyle: 'hidden',
+    backgroundColor: '#000000',
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+      webviewTag: true,
+      webSecurity: false,
+      allowRunningInsecureContent: true
+    }
   });
 
-  console.log('[Maze] Browser module loaded');
-})();
+  mainWindow.maximize();
+  mainWindow.loadFile(path.join(__dirname, 'src', 'boot.html'));
+  Menu.setApplicationMenu(null);
+}
+
+function setupHeaderBypass() {
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    const headers = { ...details.responseHeaders };
+    delete headers['x-frame-options'];
+    delete headers['X-Frame-Options'];
+    delete headers['content-security-policy'];
+    delete headers['Content-Security-Policy'];
+    headers['access-control-allow-origin'] = ['*'];
+    callback({ responseHeaders: headers });
+  });
+}
+
+ipcMain.on('boot-complete', () => {
+  if (isFirstBoot()) {
+    mainWindow.loadFile(path.join(__dirname, 'src', 'frontend', 'setup.html'));
+  } else {
+    mainWindow.loadFile(path.join(__dirname, 'src', 'frontend', 'desktop.html'));
+  }
+});
+
+ipcMain.on('setup-complete', (event, userData) => {
+  const data = {
+    ...readStorage(),
+    setupComplete: true,
+    user: userData,
+    bootCount: 1,
+    accentColor: '#0071e3',
+    createdAt: new Date().toISOString()
+  };
+  writeStorage(data);
+  mainWindow.loadFile(path.join(__dirname, 'src', 'frontend', 'desktop.html'));
+});
+
+ipcMain.handle('get-storage', () => readStorage());
+
+ipcMain.on('save-storage', (event, data) => writeStorage(data));
+
+ipcMain.on('shutdown', () => app.quit());
+
+ipcMain.on('reload', () => mainWindow.loadFile(path.join(__dirname, 'src', 'boot.html')));
+
+ipcMain.on('open-dev-tools', () => mainWindow.webContents.openDevTools());
+
+ipcMain.handle('get-system-info', () => {
+  const os = require('os');
+  return {
+    platform: os.platform(),
+    arch: os.arch(),
+    cpus: os.cpus().length,
+    totalMemory: Math.round(os.totalmem() / (1024 * 1024 * 1024)) + ' GB',
+    freeMemory: Math.round(os.freemem() / (1024 * 1024 * 1024)) + ' GB',
+    hostname: os.hostname(),
+    nodeVersion: process.versions.node,
+    electronVersion: process.versions.electron
+  };
+});
+
+app.whenReady().then(() => {
+  setupHeaderBypass();
+  createWindow();
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit();
+});
