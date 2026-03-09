@@ -3,10 +3,11 @@
 A macOS-inspired desktop environment built with Electron.
 
 ## How to run
-1. Clone the folder
-2. Open the terminal inside the folder
-3. Run `npm install`
-4. Run `npm start` or double-click `launch.bat`
+1 Extract the .zip file.
+2. Open the folder then open an another folder called "Maxe-Release".
+3. Open the terminal inside the folder
+4. Run `npm install`
+5. Run `npm start` or double-click `launch.bat`
 
 ## Features
 - macOS-style boot screen
