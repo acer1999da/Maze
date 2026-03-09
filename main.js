@@ -1,133 +1,61 @@
-const { app, BrowserWindow, ipcMain, screen, Menu, dialog } = require('electron');
-const path = require('path');
-const fs = require('fs');
+/**
+ * Maze OS — Browser Module
+ * Handles Safari-like browser window functionality
+ */
 
-let mainWindow;
-const storagePath = path.join(__dirname, 'src', 'macos-storage');
+(function() {
+  const webview = document.getElementById('browser-webview');
+  if (!webview) return;
 
-function isFirstBoot() {
-  try {
-    if (fs.existsSync(storagePath)) {
-      const data = JSON.parse(fs.readFileSync(storagePath, 'utf8'));
-      return !data.setupComplete;
-    }
-  } catch (e) {}
-  return true;
-}
+  // Wait for webview to be ready
+  webview.addEventListener('dom-ready', () => {
+    // Update address bar when webview navigates
+    webview.addEventListener('did-navigate', e => {
+      const urlInput = document.getElementById('browser-url');
+      if (urlInput && e.url) urlInput.value = e.url;
+    });
 
-function readStorage() {
-  try {
-    if (fs.existsSync(storagePath)) {
-      return JSON.parse(fs.readFileSync(storagePath, 'utf8'));
-    }
-  } catch (e) {}
-  return {};
-}
+    webview.addEventListener('did-navigate-in-page', e => {
+      const urlInput = document.getElementById('browser-url');
+      if (urlInput && e.url && e.isMainFrame) urlInput.value = e.url;
+    });
 
-function writeStorage(data) {
-  fs.writeFileSync(storagePath, JSON.stringify(data, null, 2));
-}
+    webview.addEventListener('page-title-updated', e => {
+      const titleEl = document.querySelector('#win-browser .win-title');
+      if (titleEl) titleEl.textContent = e.title || 'Safari';
+    });
 
-function createWindow() {
-  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+    webview.addEventListener('did-start-loading', () => {
+      const btn = document.querySelector('#win-browser .browser-navbtn[onclick="browserRefresh()"]');
+      if (btn) btn.textContent = '✕';
+    });
 
-  mainWindow = new BrowserWindow({
-    width: 1440,
-    height: 900,
-    minWidth: 1024,
-    minHeight: 700,
-    frame: false,
-    titleBarStyle: 'hidden',
-    backgroundColor: '#000000',
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-      webviewTag: true,
-      enableRemoteModule: true,
-      webSecurity: false,
-      allowRunningInsecureContent: true
-    },
-    icon: path.join(__dirname, 'src', 'assets', 'icon.png')
+    webview.addEventListener('did-stop-loading', () => {
+      const btn = document.querySelector('#win-browser .browser-navbtn[onclick="browserRefresh()"]');
+      if (btn) btn.textContent = '↻';
+      // Update URL bar after load
+      const urlInput = document.getElementById('browser-url');
+      if (urlInput && webview.getURL) urlInput.value = webview.getURL();
+    });
+
+    webview.addEventListener('did-fail-load', (e) => {
+      if (e.errorCode === -3) return; // Ignore aborted
+      const container = document.getElementById('browser-content');
+      // Show friendly error page
+      const errDiv = document.createElement('div');
+      errDiv.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;gap:12px;font-family:system-ui';
+      errDiv.innerHTML = `
+        <div style="font-size:48px">🌐</div>
+        <div style="font-size:18px;font-weight:600;color:#1d1d1f">Can't connect to this page</div>
+        <div style="font-size:13px;color:#6e6e73">${e.validatedURL}</div>
+        <button onclick="this.parentElement.remove();browserRefresh()" 
+          style="margin-top:8px;padding:8px 20px;border-radius:8px;border:none;background:#0071e3;color:white;font-size:14px;cursor:pointer">
+          Try Again
+        </button>`;
+      container.appendChild(errDiv);
+      setTimeout(() => errDiv.remove(), 5000);
+    });
   });
 
-  mainWindow.maximize();
-  mainWindow.loadFile(path.join(__dirname, 'src', 'boot.html'));
-  Menu.setApplicationMenu(null);
-}
-
-// IPC Handlers
-ipcMain.on('boot-complete', () => {
-  const firstBoot = isFirstBoot();
-  if (firstBoot) {
-    mainWindow.loadFile(path.join(__dirname, 'src', 'frontend', 'setup.html'));
-  } else {
-    mainWindow.loadFile(path.join(__dirname, 'src', 'frontend', 'desktop.html'));
-  }
-});
-
-ipcMain.on('setup-complete', (event, userData) => {
-  const existing = readStorage();
-  const data = {
-    ...existing,
-    setupComplete: true,
-    user: userData,
-    bootCount: 1,
-    theme: 'light',
-    wallpaper: 'gradient-aurora',
-    accentColor: '#0071e3',
-    createdAt: new Date().toISOString()
-  };
-  writeStorage(data);
-  mainWindow.loadFile(path.join(__dirname, 'src', 'frontend', 'desktop.html'));
-});
-
-ipcMain.handle('get-storage', () => {
-  return readStorage();
-});
-
-ipcMain.on('save-storage', (event, data) => {
-  writeStorage(data);
-});
-
-ipcMain.on('shutdown', () => {
-  app.quit();
-});
-
-ipcMain.on('reload', () => {
-  mainWindow.loadFile(path.join(__dirname, 'src', 'boot.html'));
-});
-
-ipcMain.on('toggle-fullscreen', () => {
-  mainWindow.setFullScreen(!mainWindow.isFullScreen());
-});
-
-ipcMain.on('open-dev-tools', () => {
-  mainWindow.webContents.openDevTools();
-});
-
-ipcMain.handle('get-system-info', () => {
-  const os = require('os');
-  return {
-    platform: os.platform(),
-    arch: os.arch(),
-    cpus: os.cpus().length,
-    totalMemory: Math.round(os.totalmem() / (1024 * 1024 * 1024)) + ' GB',
-    freeMemory: Math.round(os.freemem() / (1024 * 1024 * 1024)) + ' GB',
-    hostname: os.hostname(),
-    uptime: Math.round(os.uptime() / 60) + ' min',
-    nodeVersion: process.versions.node,
-    electronVersion: process.versions.electron
-  };
-});
-
-app.whenReady().then(() => {
-  createWindow();
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-  });
-});
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
+  console.log('[Maze] Browser module loaded');
+})();

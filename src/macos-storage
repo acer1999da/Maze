@@ -1,0 +1,15 @@
+{
+  "setupComplete": false,
+  "user": {
+    "fullName": "",
+    "username": "",
+    "country": "United States",
+    "theme": "dark",
+    "wallpaper": "aurora"
+  },
+  "bootCount": 1,
+  "theme": "light",
+  "wallpaper": "gradient-aurora",
+  "accentColor": "#0071e3",
+  "createdAt": "2026-03-09T16:55:42.316Z"
+}
