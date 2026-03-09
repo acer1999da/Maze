@@ -3,6 +3,7 @@
 A macOS-inspired desktop environment built with Electron.
 
 ## How to run
+You need node.js installed
 1 Extract the .zip file.
 2. Open the folder then open an another folder called "Maxe-Release".
 3. Open the terminal inside the folder
