@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 let mainWindow;
-const storagePath = path.join(__dirname, 'src', 'macos-storage.json');
+const storagePath = path.join(__dirname, 'src', 'macos-storage');
 
 function isFirstBoot() {
   try {
@@ -43,7 +43,9 @@ function createWindow() {
       nodeIntegration: true,
       contextIsolation: false,
       webviewTag: true,
-      enableRemoteModule: true
+      enableRemoteModule: true,
+      webSecurity: false,
+      allowRunningInsecureContent: true
     },
     icon: path.join(__dirname, 'src', 'assets', 'icon.png')
   });

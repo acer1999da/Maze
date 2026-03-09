@@ -428,13 +428,14 @@ body {
 .term-success { color: #4ec9b0; }
 
 .term-input-row {
-  display: flex; align-items: center; gap: 0; flex-shrink: 0; margin-top: 2px;
+  display: flex; align-items: center; gap: 0; flex-shrink: 0; margin-top: 2px; cursor: text;
 }
 .term-prompt-disp { color: #0dbc79; white-space: nowrap; }
 .term-input {
   flex: 1; background: none; border: none; outline: none;
   color: #d4d4d4; font-family: inherit; font-size: inherit; line-height: inherit;
-  caret-color: #d4d4d4;
+  caret-color: #d4d4d4; cursor: text; min-width: 2px;
+  -webkit-user-select: text; user-select: text;
 }
 
 /* ═══════════════════════════════════════════
@@ -476,6 +477,7 @@ body {
 
 .settings-panel {
   flex: 1; padding: 28px 32px; overflow-y: auto; display: none;
+  background: var(--win-bg); color: var(--text);
 }
 .settings-panel.active { display: block; }
 .settings-panel h2 { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 24px; }
@@ -1126,7 +1128,7 @@ body[data-theme="dark"] .spotlight-box { background: rgba(36,36,38,0.9); }
           </div>
         </div>
       </div>
-      <webview id="browser-webview" style="display:none;width:100%;height:100%;border:none"></webview>
+      <iframe id="browser-webview" style="display:none;width:100%;height:100%;border:none" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation"></iframe>
     </div>
     <div class="win-resize"></div>
   </div>
@@ -1143,7 +1145,7 @@ body[data-theme="dark"] .spotlight-box { background: rgba(36,36,38,0.9); }
       </div>
       <div class="win-title" style="color:rgba(255,255,255,0.75)">Terminal — zsh</div>
     </div>
-    <div class="terminal-body" id="terminal-body" onclick="document.getElementById('term-input').focus()">
+    <div class="terminal-body" id="terminal-body" onmousedown="setTimeout(()=>document.getElementById('term-input').focus(),0)">
       <div class="term-line" style="color:#0dbc79">Maze Terminal — zsh</div>
       <div class="term-line" style="color:#888">Last login: <span id="term-lastlogin"></span></div>
       <div class="term-line"> </div>
@@ -1173,37 +1175,37 @@ body[data-theme="dark"] .spotlight-box { background: rgba(36,36,38,0.9); }
           <span style="font-size:12px">🔍</span>
           <input type="text" placeholder="Search" id="settings-search"/>
         </div>
-        <div class="settings-nav-item active" onclick="showSettings('appearance')">
+        <div class="settings-nav-item active" onclick="showSettings('appearance', this)">
           <div class="settings-nav-icon" style="background:linear-gradient(135deg,#636366,#3a3a3c)">🎨</div>Appearance
         </div>
-        <div class="settings-nav-item" onclick="showSettings('desktop')">
+        <div class="settings-nav-item" onclick="showSettings('desktop', this)">
           <div class="settings-nav-icon" style="background:linear-gradient(135deg,#1e8bc3,#0f3460)">🖥</div>Desktop & Dock
         </div>
-        <div class="settings-nav-item" onclick="showSettings('sound')">
+        <div class="settings-nav-item" onclick="showSettings('sound', this)">
           <div class="settings-nav-icon" style="background:linear-gradient(135deg,#ff9f0a,#ff6b00)">🔊</div>Sound
         </div>
-        <div class="settings-nav-item" onclick="showSettings('network')">
+        <div class="settings-nav-item" onclick="showSettings('network', this)">
           <div class="settings-nav-icon" style="background:linear-gradient(135deg,#0071e3,#0051d5)">📶</div>Network
         </div>
-        <div class="settings-nav-item" onclick="showSettings('bluetooth')">
+        <div class="settings-nav-item" onclick="showSettings('bluetooth', this)">
           <div class="settings-nav-icon" style="background:linear-gradient(135deg,#af52de,#8944ab)">🦷</div>Bluetooth
         </div>
-        <div class="settings-nav-item" onclick="showSettings('notifications')">
+        <div class="settings-nav-item" onclick="showSettings('notifications', this)">
           <div class="settings-nav-icon" style="background:linear-gradient(135deg,#ff3b30,#c0392b)">🔔</div>Notifications
         </div>
-        <div class="settings-nav-item" onclick="showSettings('privacy')">
+        <div class="settings-nav-item" onclick="showSettings('privacy', this)">
           <div class="settings-nav-icon" style="background:linear-gradient(135deg,#636366,#48484a)">🔒</div>Privacy & Security
         </div>
-        <div class="settings-nav-item" onclick="showSettings('battery')">
+        <div class="settings-nav-item" onclick="showSettings('battery', this)">
           <div class="settings-nav-icon" style="background:linear-gradient(135deg,#34c759,#248a3d)">🔋</div>Battery
         </div>
-        <div class="settings-nav-item" onclick="showSettings('about')">
+        <div class="settings-nav-item" onclick="showSettings('about', this)">
           <div class="settings-nav-icon" style="background:linear-gradient(135deg,#5ac8fa,#007aff)">ℹ️</div>About
         </div>
       </div>
       <div style="flex:1;overflow-y:auto">
         <!-- Appearance Panel -->
-        <div class="settings-panel active" id="panel-appearance">
+        <div class="settings-panel active" style="background:var(--win-bg)" id="panel-appearance">
           <h2>Appearance</h2>
           <div class="settings-section">
             <div class="settings-row">
@@ -1238,7 +1240,7 @@ body[data-theme="dark"] .spotlight-box { background: rgba(36,36,38,0.9); }
         </div>
 
         <!-- Desktop & Dock Panel -->
-        <div class="settings-panel" id="panel-desktop">
+        <div class="settings-panel" style="background:var(--win-bg)" id="panel-desktop">
           <h2>Desktop & Dock</h2>
           <div class="settings-section">
             <div class="settings-row">
@@ -1268,7 +1270,7 @@ body[data-theme="dark"] .spotlight-box { background: rgba(36,36,38,0.9); }
         </div>
 
         <!-- Sound Panel -->
-        <div class="settings-panel" id="panel-sound">
+        <div class="settings-panel" style="background:var(--win-bg)" id="panel-sound">
           <h2>Sound</h2>
           <div class="settings-section">
             <div class="settings-row">
@@ -1289,7 +1291,7 @@ body[data-theme="dark"] .spotlight-box { background: rgba(36,36,38,0.9); }
         </div>
 
         <!-- Network Panel -->
-        <div class="settings-panel" id="panel-network">
+        <div class="settings-panel" style="background:var(--win-bg)" id="panel-network">
           <h2>Network</h2>
           <div class="settings-section">
             <div class="settings-row">
@@ -1308,7 +1310,7 @@ body[data-theme="dark"] .spotlight-box { background: rgba(36,36,38,0.9); }
         </div>
 
         <!-- Bluetooth Panel -->
-        <div class="settings-panel" id="panel-bluetooth">
+        <div class="settings-panel" style="background:var(--win-bg)" id="panel-bluetooth">
           <h2>Bluetooth</h2>
           <div class="settings-section">
             <div class="settings-row">
@@ -1320,7 +1322,7 @@ body[data-theme="dark"] .spotlight-box { background: rgba(36,36,38,0.9); }
         </div>
 
         <!-- Notifications Panel -->
-        <div class="settings-panel" id="panel-notifications">
+        <div class="settings-panel" style="background:var(--win-bg)" id="panel-notifications">
           <h2>Notifications</h2>
           <div class="settings-section">
             <div class="settings-row"><div class="settings-row-label">Allow Notifications</div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
@@ -1330,7 +1332,7 @@ body[data-theme="dark"] .spotlight-box { background: rgba(36,36,38,0.9); }
         </div>
 
         <!-- Privacy Panel -->
-        <div class="settings-panel" id="panel-privacy">
+        <div class="settings-panel" style="background:var(--win-bg)" id="panel-privacy">
           <h2>Privacy & Security</h2>
           <div class="settings-section">
             <div class="settings-row"><div class="settings-row-label">Location Services</div><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
@@ -1341,7 +1343,7 @@ body[data-theme="dark"] .spotlight-box { background: rgba(36,36,38,0.9); }
         </div>
 
         <!-- Battery Panel -->
-        <div class="settings-panel" id="panel-battery">
+        <div class="settings-panel" style="background:var(--win-bg)" id="panel-battery">
           <h2>Battery</h2>
           <div class="settings-section">
             <div class="settings-row"><div class="settings-row-label">Battery percentage</div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
@@ -1350,7 +1352,7 @@ body[data-theme="dark"] .spotlight-box { background: rgba(36,36,38,0.9); }
         </div>
 
         <!-- About Panel -->
-        <div class="settings-panel" id="panel-about">
+        <div class="settings-panel" style="background:var(--win-bg)" id="panel-about">
           <h2>About This Maze</h2>
           <div style="display:flex;align-items:center;gap:24px;margin-bottom:28px">
             <div style="font-size:72px">⌘</div>
@@ -1746,6 +1748,7 @@ function openApp(app) {
   if (app === 'about') loadAboutInfo();
   if (app === 'settings' && document.getElementById('si-platform').textContent === '–') loadSystemInfoPanel();
   if (app === 'browser') updateNewtabTime();
+  if (app === 'terminal') setTimeout(() => document.getElementById('term-input').focus(), 100);
 
   hideAllMenus();
 }
@@ -2268,11 +2271,12 @@ function newNote() {
 }
 
 /* ─── SETTINGS ───────────────────────────────── */
-function showSettings(panel) {
+function showSettings(panel, el) {
   document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.settings-nav-item').forEach(i => i.classList.remove('active'));
-  document.getElementById('panel-' + panel).classList.add('active');
-  event.currentTarget.classList.add('active');
+  const panelEl = document.getElementById('panel-' + panel);
+  if (panelEl) panelEl.classList.add('active');
+  if (el) el.classList.add('active');
 }
 
 function openSettings(panel) {
