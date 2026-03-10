@@ -119,3 +119,14 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
+
+// Extra IPC for BIOS and BSOD (added in v1.2)
+ipcMain.on('open-bios', () => {
+  mainWindow.loadFile(path.join(__dirname, 'src', 'frontend', 'bios.html'));
+});
+
+ipcMain.on('open-bsod', (event, opts = {}) => {
+  const query = new URLSearchParams(opts).toString();
+  const url = path.join(__dirname, 'src', 'frontend', 'bsod.html') + (query ? '?' + query : '');
+  mainWindow.loadFile(url);
+});

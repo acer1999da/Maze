@@ -945,6 +945,9 @@ body[data-theme="dark"] .spotlight-box { background: rgba(36,36,38,0.9); }
     <div class="dd-item" onclick="shutdown()">Shut Down…</div>
     <div class="dd-sep"></div>
     <div class="dd-item" onclick="">Lock Screen <span class="dd-shortcut">⌃⌘Q</span></div>
+    <div class="dd-sep"></div>
+    <div class="dd-item" onclick="openBIOS()">Enter BIOS Setup</div>
+    <div class="dd-item" onclick="triggerBSOD()">Simulate BSOD</div>
   </div>
 
   <div class="mb-dropdown" id="menu-finder" style="left:40px">
@@ -1128,7 +1131,7 @@ body[data-theme="dark"] .spotlight-box { background: rgba(36,36,38,0.9); }
           </div>
         </div>
       </div>
-      <iframe id="browser-webview" style="display:none;width:100%;height:100%;border:none" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation"></iframe>
+      <webview id="browser-webview" style="display:none;width:100%;height:100%;border:none" partition="persist:browser" useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" allowpopups></webview>
     </div>
     <div class="win-resize"></div>
   </div>
@@ -2340,7 +2343,10 @@ function browserNav(dir) {
 
 function browserRefresh() {
   const wv = document.getElementById('browser-webview');
-  if (wv.src) wv.reload();
+  try {
+    if (wv && wv.reload) wv.reload();
+    else if (wv && wv.src) wv.src = wv.src;
+  } catch(e) {}
 }
 
 /* ─── SYSTEM INFO ────────────────────────────── */
@@ -2408,6 +2414,18 @@ setInterval(() => {
 
 // START
 init();
+
+function openBIOS() {
+  require('electron').ipcRenderer.send('open-bios');
+}
+
+function triggerBSOD() {
+  require('electron').ipcRenderer.send('open-bsod', {
+    code: 'MAZE_KERNEL_EXCEPTION_0x0000001E',
+    comp: 'MazeDesktop.sys',
+    msg: 'Manually triggered BSOD simulation'
+  });
+}
 </script>
 
 <!-- Load backend modules -->
