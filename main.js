@@ -1,33 +1,31 @@
-const { app, BrowserWindow, ipcMain, screen, Menu, session } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
 let mainWindow;
-const storagePath = path.join(__dirname, 'src', 'macos-storage.json');
 
-function isFirstBoot() {
-  try {
-    if (fs.existsSync(storagePath)) {
-      const data = JSON.parse(fs.readFileSync(storagePath, 'utf8'));
-      return !data.setupComplete;
-    }
-  } catch (e) {}
-  return true;
-}
+// ── PATHS ──
+const STORAGE_PATH = path.join(__dirname, 'storage.json');
+const HTML = (file) => path.join(__dirname, 'GUI', 'Html', file);
 
+// ── STORAGE ──
 function readStorage() {
   try {
-    if (fs.existsSync(storagePath)) {
-      return JSON.parse(fs.readFileSync(storagePath, 'utf8'));
-    }
+    if (fs.existsSync(STORAGE_PATH))
+      return JSON.parse(fs.readFileSync(STORAGE_PATH, 'utf8'));
   } catch (e) {}
   return {};
 }
 
 function writeStorage(data) {
-  fs.writeFileSync(storagePath, JSON.stringify(data, null, 2));
+  fs.writeFileSync(STORAGE_PATH, JSON.stringify(data, null, 2));
 }
 
+function isFirstBoot() {
+  return !readStorage().setupComplete;
+}
+
+// ── WINDOW ──
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1440,
@@ -42,15 +40,17 @@ function createWindow() {
       contextIsolation: false,
       webviewTag: true,
       webSecurity: false,
-      allowRunningInsecureContent: true
+      allowRunningInsecureContent: true,
+      preload: path.join(__dirname, 'preload.js')
     }
   });
 
   mainWindow.maximize();
-  mainWindow.loadFile(path.join(__dirname, 'src', 'boot.html'));
+  mainWindow.loadFile(HTML('boot.html'));
   Menu.setApplicationMenu(null);
 }
 
+// ── HEADER BYPASS (for browser) ──
 function setupHeaderBypass() {
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     const headers = { ...details.responseHeaders };
@@ -63,35 +63,31 @@ function setupHeaderBypass() {
   });
 }
 
+// ── IPC ──
 ipcMain.on('boot-complete', () => {
-  if (isFirstBoot()) {
-    mainWindow.loadFile(path.join(__dirname, 'src', 'frontend', 'setup.html'));
-  } else {
-    mainWindow.loadFile(path.join(__dirname, 'src', 'frontend', 'desktop.html'));
-  }
+  mainWindow.loadFile(HTML(isFirstBoot() ? 'setup.html' : 'desktop.html'));
 });
 
 ipcMain.on('setup-complete', (event, userData) => {
-  const data = {
+  writeStorage({
     ...readStorage(),
     setupComplete: true,
     user: userData,
     bootCount: 1,
     accentColor: '#0071e3',
     createdAt: new Date().toISOString()
-  };
-  writeStorage(data);
-  mainWindow.loadFile(path.join(__dirname, 'src', 'frontend', 'desktop.html'));
+  });
+  mainWindow.loadFile(HTML('desktop.html'));
 });
 
 ipcMain.handle('get-storage', () => readStorage());
-
-ipcMain.on('save-storage', (event, data) => writeStorage(data));
-
+ipcMain.on('save-storage', (_, data) => writeStorage(data));
 ipcMain.on('shutdown', () => app.quit());
-
-ipcMain.on('reload', () => mainWindow.loadFile(path.join(__dirname, 'src', 'boot.html')));
-
+ipcMain.on('reload', () => mainWindow.loadFile(HTML('boot.html')));
+ipcMain.on('open-bios', () => mainWindow.loadFile(HTML('bios.html')));
+ipcMain.on('open-bsod', (_, opts = {}) => {
+  mainWindow.loadFile(HTML('bsod.html'), { query: opts });
+});
 ipcMain.on('open-dev-tools', () => mainWindow.webContents.openDevTools());
 
 ipcMain.handle('get-system-info', () => {
@@ -100,14 +96,15 @@ ipcMain.handle('get-system-info', () => {
     platform: os.platform(),
     arch: os.arch(),
     cpus: os.cpus().length,
-    totalMemory: Math.round(os.totalmem() / (1024 * 1024 * 1024)) + ' GB',
-    freeMemory: Math.round(os.freemem() / (1024 * 1024 * 1024)) + ' GB',
+    totalMemory: Math.round(os.totalmem() / (1024 ** 3)) + ' GB',
+    freeMemory: Math.round(os.freemem() / (1024 ** 3)) + ' GB',
     hostname: os.hostname(),
     nodeVersion: process.versions.node,
     electronVersion: process.versions.electron
   };
 });
 
+// ── INIT ──
 app.whenReady().then(() => {
   setupHeaderBypass();
   createWindow();
@@ -118,15 +115,4 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
-});
-
-// Extra IPC for BIOS and BSOD (added in v1.2)
-ipcMain.on('open-bios', () => {
-  mainWindow.loadFile(path.join(__dirname, 'src', 'frontend', 'bios.html'));
-});
-
-ipcMain.on('open-bsod', (event, opts = {}) => {
-  const query = new URLSearchParams(opts).toString();
-  const url = path.join(__dirname, 'src', 'frontend', 'bsod.html') + (query ? '?' + query : '');
-  mainWindow.loadFile(url);
 });

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Maze — Booting</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    width:100vw; height:100vh; background:#000;
+    display:flex; align-items:center; justify-content:center;
+    font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;
+    overflow:hidden; user-select:none;
+  }
+  .wrap { display:flex; flex-direction:column; align-items:center; gap:48px; animation:fadeIn .8s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:scale(.9)} to{opacity:1;transform:scale(1)} }
+  .logo svg { width:96px; height:96px; filter:drop-shadow(0 0 30px rgba(99,179,237,.5)); }
+  .progress-wrap { width:180px; display:flex; flex-direction:column; align-items:center; gap:12px; }
+  .track { width:100%; height:3px; background:rgba(255,255,255,.12); border-radius:100px; overflow:hidden; }
+  .fill { height:100%; background:linear-gradient(90deg,#63b3ed,#a78bfa); border-radius:100px; width:0%; transition:width .3s ease; }
+  .label { color:rgba(255,255,255,.35); font-size:11px; letter-spacing:.05em; font-weight:500; }
+  .fade-out { animation:fadeOut .6s ease forwards; }
+  @keyframes fadeOut { to{opacity:0} }
+  @keyframes circleDraw { to{stroke-dashoffset:0} }
+  @keyframes pathDraw { to{stroke-dashoffset:0} }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <div class="logo">
+    <svg viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="48" cy="48" r="46" stroke="url(#g)" stroke-width="1.5"
+        stroke-dasharray="289" stroke-dashoffset="289"
+        style="animation:circleDraw 1.5s ease .3s forwards"/>
+      <path d="M26 65V31L48 55L70 31V65" stroke="white" stroke-width="3.5"
+        stroke-linecap="round" stroke-linejoin="round" fill="none"
+        style="stroke-dasharray:120;stroke-dashoffset:120;animation:pathDraw 1s ease .8s forwards"/>
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="96" y2="96" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#63b3ed"/><stop offset="1" stop-color="#a78bfa"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  </div>
+  <div class="progress-wrap">
+    <div class="track"><div class="fill" id="fill"></div></div>
+    <span class="label" id="label">Starting Maze…</span>
+  </div>
+</div>
+<script>
+const { ipcRenderer } = require('electron');
+const stages = [
+  { pct:15, label:'Loading kernel…',    delay:400 },
+  { pct:35, label:'Mounting volumes…',  delay:700 },
+  { pct:55, label:'Starting services…', delay:800 },
+  { pct:72, label:'Loading Maze…',      delay:700 },
+  { pct:88, label:'Preparing desktop…', delay:600 },
+  { pct:100,label:'Welcome to Maze',    delay:400 },
+];
+let i = 0;
+function next() {
+  if (i >= stages.length) {
+    setTimeout(() => {
+      document.getElementById('wrap').classList.add('fade-out');
+      setTimeout(() => ipcRenderer.send('boot-complete'), 650);
+    }, 300);
+    return;
+  }
+  const s = stages[i++];
+  document.getElementById('fill').style.width = s.pct + '%';
+  document.getElementById('label').textContent = s.label;
+  setTimeout(next, s.delay);
+}
+setTimeout(next, 800);
+</script>
+</body>
+</html>

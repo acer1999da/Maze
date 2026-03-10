@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Maze Setup</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--blue:#0071e3;--text:#1d1d1f;--subtext:#6e6e73;--border:rgba(0,0,0,.08);--input:#fafafa}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;
+  background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460,#533483);
+  width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;
+  overflow:hidden;-webkit-app-region:drag}
+.card{background:rgba(255,255,255,.95);backdrop-filter:blur(40px);border-radius:18px;
+  width:560px;min-height:480px;box-shadow:0 40px 80px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.2);
+  display:flex;flex-direction:column;overflow:hidden;-webkit-app-region:no-drag}
+.titlebar{padding:16px 20px 0;display:flex;gap:8px}
+.tl{width:12px;height:12px;border-radius:50%;cursor:pointer}
+.tl-r{background:#ff5f57}.tl-y{background:#febc2e}.tl-g{background:#28c840}
+.body{padding:40px 56px 48px;flex:1;display:flex;flex-direction:column}
+.dots{display:flex;gap:6px;justify-content:center;margin-bottom:36px}
+.dot{width:6px;height:6px;border-radius:50%;background:#d1d1d6;transition:all .3s}
+.dot.active{background:var(--blue);width:20px;border-radius:3px}
+.dot.done{background:var(--blue);opacity:.4}
+.step{display:none;flex-direction:column;flex:1}
+.step.active{display:flex;animation:stepIn .4s ease}
+@keyframes stepIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+.emoji{font-size:52px;margin-bottom:16px}
+.title{font-size:28px;font-weight:700;color:var(--text);margin-bottom:8px;letter-spacing:-.5px}
+.sub{font-size:15px;color:var(--subtext);line-height:1.5;margin-bottom:32px}
+.fg{margin-bottom:16px}
+.fg label{display:block;font-size:13px;font-weight:600;color:var(--subtext);margin-bottom:6px;letter-spacing:.02em;text-transform:uppercase}
+.fg input,.fg select{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;
+  font-size:15px;font-family:inherit;color:var(--text);background:var(--input);outline:none;transition:border-color .2s,box-shadow .2s}
+.fg input:focus,.fg select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(0,113,227,.15);background:#fff}
+.wp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.wp{aspect-ratio:16/10;border-radius:8px;cursor:pointer;border:2.5px solid transparent;
+  overflow:hidden;transition:transform .15s,border-color .2s;position:relative}
+.wp:hover{transform:scale(1.04)}.wp.sel{border-color:var(--blue)}
+.wp.sel::after{content:'✓';position:absolute;bottom:4px;right:4px;background:var(--blue);
+  color:white;font-size:9px;font-weight:700;width:16px;height:16px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center}
+.wp-aurora{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460,#533483)}
+.wp-sonoma{background:linear-gradient(135deg,#ffd89b,#ff9a44,#d44000)}
+.wp-sequoia{background:linear-gradient(135deg,#2d5016,#4a7c2a,#6aaf3d)}
+.wp-ventura{background:linear-gradient(135deg,#1e3a5f,#2d6a9f,#1e8bc3)}
+.wp-monterey{background:linear-gradient(135deg,#0f0c29,#302b63,#24243e)}
+.wp-bigsur{background:radial-gradient(ellipse at 30% 50%,#f7c59f,#efa489,#c57a6e,#8e4a5a)}
+.wp-midnight{background:linear-gradient(135deg,#0a0a0a,#1a1a2e,#0f0f0f)}
+.wp-cotton{background:linear-gradient(135deg,#ffecd2,#fcb69f,#ff9a9e)}
+.theme-row{display:flex;gap:12px;margin-bottom:16px}
+.theme-opt{flex:1;padding:14px;border-radius:12px;border:2px solid var(--border);cursor:pointer;text-align:center;transition:all .2s}
+.theme-opt.sel{border-color:var(--blue);background:rgba(0,113,227,.06)}
+.theme-preview{width:100%;height:44px;border-radius:8px;margin-bottom:8px}
+.theme-light .theme-preview{background:#f5f5f7;border:1px solid rgba(0,0,0,.1)}
+.theme-dark .theme-preview{background:#1c1c1e}
+.theme-opt span{font-size:13px;font-weight:600;color:var(--text)}
+.btn-row{display:flex;justify-content:flex-end;gap:10px;margin-top:auto;padding-top:24px}
+.btn{padding:9px 22px;border-radius:980px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;border:none;transition:all .2s}
+.btn-p{background:var(--blue);color:white}.btn-p:hover{background:#0077ed;transform:scale(1.02)}
+.btn-s{background:rgba(0,0,0,.06);color:var(--text)}.btn-s:hover{background:rgba(0,0,0,.1)}
+.done-check{width:72px;height:72px;background:linear-gradient(135deg,#28c840,#20a830);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:32px;margin-bottom:20px;
+  animation:popIn .5s cubic-bezier(.34,1.56,.64,1) forwards}
+@keyframes popIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="titlebar">
+    <div class="tl tl-r" onclick="require('electron').ipcRenderer.send('shutdown')"></div>
+    <div class="tl tl-y"></div>
+    <div class="tl tl-g"></div>
+  </div>
+  <div class="body">
+    <div class="dots" id="dots"></div>
+
+    <div class="step active" id="s0">
+      <div class="emoji">👋</div>
+      <div class="title">Welcome to Maze</div>
+      <div class="sub">A beautiful desktop environment. Let's get you set up.</div>
+      <div class="fg"><label>Country or Region</label>
+        <select id="country">
+          <option>United States</option><option>United Kingdom</option><option>Canada</option>
+          <option>Australia</option><option>Germany</option><option>France</option>
+          <option>Japan</option><option>India</option><option>Brazil</option><option>Other</option>
+        </select>
+      </div>
+      <div class="btn-row"><button class="btn btn-p" onclick="next()">Continue</button></div>
+    </div>
+
+    <div class="step" id="s1">
+      <div class="emoji">👤</div>
+      <div class="title">Create Your Account</div>
+      <div class="sub">This personalizes your Maze experience.</div>
+      <div class="fg"><label>Full Name</label><input type="text" id="fullName" placeholder="e.g. Alex Johnson"/></div>
+      <div class="fg"><label>Username</label><input type="text" id="username" placeholder="e.g. alex"/></div>
+      <div class="fg"><label>Password (Optional)</label><input type="password" id="password" placeholder="Leave blank to skip"/></div>
+      <div class="btn-row">
+        <button class="btn btn-s" onclick="prev()">Back</button>
+        <button class="btn btn-p" onclick="next()">Continue</button>
+      </div>
+    </div>
+
+    <div class="step" id="s2">
+      <div class="emoji">🎨</div>
+      <div class="title">Choose Your Look</div>
+      <div class="sub">Select the appearance that feels right.</div>
+      <div class="theme-row">
+        <div class="theme-opt theme-light sel" id="tl" onclick="selTheme('light')">
+          <div class="theme-preview"></div><span>Light</span>
+        </div>
+        <div class="theme-opt theme-dark" id="td" onclick="selTheme('dark')">
+          <div class="theme-preview"></div><span>Dark</span>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-s" onclick="prev()">Back</button>
+        <button class="btn btn-p" onclick="next()">Continue</button>
+      </div>
+    </div>
+
+    <div class="step" id="s3">
+      <div class="emoji">🖼</div>
+      <div class="title">Choose a Wallpaper</div>
+      <div class="sub">Set the mood for your desktop.</div>
+      <div class="wp-grid">
+        <div class="wp wp-aurora sel" data-wp="aurora" onclick="selWp(this)"></div>
+        <div class="wp wp-sonoma" data-wp="sonoma" onclick="selWp(this)"></div>
+        <div class="wp wp-sequoia" data-wp="sequoia" onclick="selWp(this)"></div>
+        <div class="wp wp-ventura" data-wp="ventura" onclick="selWp(this)"></div>
+        <div class="wp wp-monterey" data-wp="monterey" onclick="selWp(this)"></div>
+        <div class="wp wp-bigsur" data-wp="bigsur" onclick="selWp(this)"></div>
+        <div class="wp wp-midnight" data-wp="midnight" onclick="selWp(this)"></div>
+        <div class="wp wp-cotton" data-wp="cotton" onclick="selWp(this)"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-s" onclick="prev()">Back</button>
+        <button class="btn btn-p" onclick="next()">Continue</button>
+      </div>
+    </div>
+
+    <div class="step" id="s4">
+      <div class="done-check">✓</div>
+      <div class="title">All Set!</div>
+      <div class="sub">Welcome, <strong id="wname">friend</strong>. Your desktop is ready.</div>
+      <div class="btn-row" style="margin-top:32px">
+        <button class="btn btn-p" onclick="finish()" style="padding:12px 32px;font-size:16px">Start Using Maze →</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const { ipcRenderer } = require('electron');
+const TOTAL = 5;
+let cur = 0, theme = 'light', wp = 'aurora';
+
+// Build dots
+const dotsEl = document.getElementById('dots');
+for (let i = 0; i < TOTAL; i++) {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i===0?' active':'');
+  d.id = 'd'+i; dotsEl.appendChild(d);
+}
+
+function updateDots() {
+  for (let i=0;i<TOTAL;i++) {
+    document.getElementById('d'+i).className =
+      'dot'+(i===cur?' active':i<cur?' done':'');
+  }
+}
+
+function next() {
+  document.getElementById('s'+cur).classList.remove('active');
+  cur++;
+  document.getElementById('s'+cur).classList.add('active');
+  updateDots();
+  if (cur === TOTAL-1) {
+    const name = document.getElementById('fullName').value.trim() || 'friend';
+    document.getElementById('wname').textContent = name.split(' ')[0];
+  }
+}
+
+function prev() {
+  document.getElementById('s'+cur).classList.remove('active');
+  cur--;
+  document.getElementById('s'+cur).classList.add('active');
+  updateDots();
+}
+
+function selTheme(t) {
+  theme = t;
+  document.getElementById('tl').classList.toggle('sel', t==='light');
+  document.getElementById('td').classList.toggle('sel', t==='dark');
+}
+
+function selWp(el) {
+  document.querySelectorAll('.wp').forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');
+  wp = el.dataset.wp;
+}
+
+function finish() {
+  ipcRenderer.send('setup-complete', {
+    fullName: document.getElementById('fullName').value.trim() || 'Maze User',
+    username: document.getElementById('username').value.trim() || 'user',
+    country: document.getElementById('country').value,
+    theme, wallpaper: wp
+  });
+}
+</script>
+</body>
+</html>

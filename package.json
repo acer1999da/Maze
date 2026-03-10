@@ -1,17 +1,18 @@
 {
   "name": "maze",
-  "version": "1.0.0",
-  "description": "",
+  "version": "2.0.0",
+  "description": "Maze OS — A macOS-inspired desktop environment built with Electron",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "electron ."
+    "start": "electron .",
+    "linux": "bash Linux-Support/launch.sh",
+    "test": "echo \"No tests specified\" && exit 0"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["maze", "macos", "electron", "desktop", "os"],
+  "author": "acer1999da",
+  "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
-    "electron": "^40.8.0"
+    "electron": "^28.0.0"
   }
 }
