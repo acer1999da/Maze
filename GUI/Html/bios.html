@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Maze BIOS</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background:#000080; color:#c0c0c0;
+    font-family:'Courier New','Lucida Console',monospace;
+    font-size:14px; width:100vw; height:100vh;
+    overflow:hidden; user-select:none; -webkit-app-region:drag;
+  }
+
+  /* ── BIOS HEADER ── */
+  .bios-header {
+    background:#c0c0c0; color:#000080;
+    display:flex; justify-content:space-between;
+    padding:2px 8px; font-weight:bold; font-size:13px;
+    -webkit-app-region:no-drag;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  .bios-body {
+    display:flex; height:calc(100vh - 22px - 36px);
+  }
+
+  /* ── TABS ── */
+  .bios-tabs {
+    background:#000080; border-right:1px solid #c0c0c0;
+    min-width:160px; padding-top:4px;
+  }
+  .bios-tab {
+    padding:4px 16px; color:#c0c0c0; cursor:pointer; font-size:13px;
+    -webkit-app-region:no-drag;
+  }
+  .bios-tab:hover { background:#0000aa; }
+  .bios-tab.active { background:#c0c0c0; color:#000080; font-weight:bold; }
+
+  /* ── PANELS ── */
+  .bios-panel {
+    flex:1; padding:12px 20px; display:none; flex-direction:column;
+    gap:0; overflow-y:auto; -webkit-app-region:no-drag;
+    background:#000080;
+  }
+  .bios-panel.active { display:flex; }
+
+  .bios-section-title {
+    color:#ffff00; font-weight:bold; font-size:13px;
+    margin-bottom:8px; border-bottom:1px solid #4444aa; padding-bottom:3px;
+  }
+  .bios-row {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:3px 8px; border-radius:2px; cursor:default;
+  }
+  .bios-row:hover { background:#0000aa; }
+  .bios-row-value { color:#00ffff; font-weight:bold; }
+  .bios-spacer { height:10px; }
+  .toggle-val { cursor:pointer; }
+  .toggle-val:hover { text-decoration:underline; }
+
+  /* ── FOOTER ── */
+  .bios-footer {
+    background:#c0c0c0; color:#000080; height:36px;
+    display:flex; align-items:center; padding:0 8px; gap:16px;
+    font-size:12px; font-weight:bold; flex-wrap:wrap;
+    -webkit-app-region:no-drag;
+  }
+  .bios-key {
+    background:#000080; color:#fff; padding:1px 6px;
+    border:1px solid #fff; border-radius:2px; font-size:11px;
+  }
+
+  /* ── POST SCREEN ── */
+  #post-screen {
+    position:fixed; inset:0; background:#000; color:#c0c0c0;
+    font-family:'Courier New',monospace; font-size:13px;
+    padding:20px 24px; z-index:100; white-space:pre; line-height:1.5;
+    -webkit-app-region:no-drag;
+  }
+  .post-line { opacity:0; animation:postFade .05s ease forwards; }
+  @keyframes postFade { to { opacity:1; } }
+
+  /* ── OS PICKER ── */
+  #os-picker {
+    position:fixed; inset:0; background:#000;
+    display:none; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap:0; z-index:200; -webkit-app-region:no-drag;
+  }
+  #os-picker.open { display:flex; }
+
+  .picker-header {
+    color:white; font-family:'Segoe UI',sans-serif;
+    font-size:22px; font-weight:300; margin-bottom:48px;
+    letter-spacing:-0.5px;
+  }
+
+  .picker-options {
+    display:flex; gap:40px; margin-bottom:56px;
+  }
+
+  .picker-option {
+    display:flex; flex-direction:column; align-items:center;
+    gap:16px; cursor:pointer; padding:20px 28px; border-radius:12px;
+    border:2px solid transparent; transition:all .2s;
+    -webkit-app-region:no-drag;
+  }
+  .picker-option:hover { border-color:rgba(255,255,255,0.4); background:rgba(255,255,255,0.06); }
+  .picker-option.selected { border-color:rgba(255,255,255,0.9); background:rgba(255,255,255,0.1); }
+
+  .picker-icon {
+    width:88px; height:88px; border-radius:20px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:52px;
+  }
+  .picker-icon-win { background:linear-gradient(135deg,#0078d4,#00bcf2); }
+  .picker-icon-maze { background:linear-gradient(135deg,#1a1a2e,#533483); }
+
+  .picker-name {
+    color:white; font-family:'Segoe UI',sans-serif;
+    font-size:15px; font-weight:500; text-align:center;
+  }
+  .picker-sub {
+    color:rgba(255,255,255,0.5); font-family:'Segoe UI',sans-serif;
+    font-size:12px; text-align:center;
+  }
+
+  .picker-arrow {
+    width:48px; height:48px; border-radius:50%;
+    background:rgba(255,255,255,0.15); border:1.5px solid rgba(255,255,255,0.4);
+    color:white; font-size:20px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Segoe UI',sans-serif; transition:background .2s;
+    margin-top:8px;
+  }
+  .picker-arrow:hover { background:rgba(255,255,255,0.25); }
+
+  .picker-footer {
+    position:absolute; bottom:32px;
+    color:rgba(255,255,255,0.4); font-family:'Segoe UI',sans-serif;
+    font-size:12px; text-align:center;
+  }
+
+  .picker-countdown {
+    color:rgba(255,255,255,0.5); font-family:'Segoe UI',sans-serif;
+    font-size:13px; margin-top:24px;
+  }
+
+  /* ── WINDOWS 11 BOOT ── */
+  #win11-boot {
+    position:fixed; inset:0;
+    background:#000; display:none;
+    flex-direction:column; align-items:center; justify-content:center;
+    gap:40px; z-index:300;
+  }
+  #win11-boot.open { display:flex; }
+
+  .win11-logo {
+    display:flex; flex-direction:column; align-items:center; gap:32px;
+  }
+  .win11-logo-grid {
+    display:grid; grid-template-columns:1fr 1fr; gap:6px;
+    width:72px; height:72px;
+  }
+  .win11-logo-grid div {
+    border-radius:3px; background:#0078d4;
+    animation:winFade 0.6s ease forwards; opacity:0;
+  }
+  .win11-logo-grid div:nth-child(1) { animation-delay:.1s; }
+  .win11-logo-grid div:nth-child(2) { animation-delay:.2s; }
+  .win11-logo-grid div:nth-child(3) { animation-delay:.3s; }
+  .win11-logo-grid div:nth-child(4) { animation-delay:.4s; }
+  @keyframes winFade { to { opacity:1; } }
+
+  .win11-spinner {
+    display:flex; gap:8px;
+  }
+  .win11-dot {
+    width:8px; height:8px; border-radius:50%; background:#0078d4;
+    animation:winDot 1.2s ease-in-out infinite;
+  }
+  .win11-dot:nth-child(1) { animation-delay:0s; }
+  .win11-dot:nth-child(2) { animation-delay:.15s; }
+  .win11-dot:nth-child(3) { animation-delay:.3s; }
+  .win11-dot:nth-child(4) { animation-delay:.45s; }
+  .win11-dot:nth-child(5) { animation-delay:.6s; }
+  @keyframes winDot {
+    0%,80%,100% { transform:scale(.6); opacity:.4; }
+    40% { transform:scale(1); opacity:1; }
+  }
+
+  /* blinking cursor */
+  .blink { animation:blink 1s step-end infinite; }
+  @keyframes blink { 50% { opacity:0; } }
+</style>
+</head>
+<body>
+
+<!-- ── POST SCREEN ── -->
+<div id="post-screen"></div>
+
+<!-- ── OS PICKER ── -->
+<div id="os-picker">
+  <div class="picker-header">Choose an operating system</div>
+  <div class="picker-options">
+
+    <div class="picker-option" id="opt-win" onclick="selectOS('win')" ondblclick="bootOS('win')">
+      <div class="picker-icon picker-icon-win">⊞</div>
+      <div class="picker-name">Windows 11</div>
+      <div class="picker-sub">Maze Edition</div>
+      <div class="picker-arrow" onclick="event.stopPropagation();bootOS('win')">→</div>
+    </div>
+
+    <div class="picker-option selected" id="opt-maze" onclick="selectOS('maze')" ondblclick="bootOS('maze')">
+      <div class="picker-icon picker-icon-maze">⌘</div>
+      <div class="picker-name">Maze OS</div>
+      <div class="picker-sub">Default</div>
+      <div class="picker-arrow" onclick="event.stopPropagation();bootOS('maze')">→</div>
+    </div>
+
+  </div>
+  <div class="picker-countdown" id="picker-countdown">
+    Starting <strong id="picker-os-name">Maze OS</strong> in <span id="picker-timer">10</span>s...
+  </div>
+  <div class="picker-footer">
+    Use arrow keys or click to select · Press Enter to confirm
+  </div>
+</div>
+
+<!-- ── WINDOWS 11 BOOT ── -->
+<div id="win11-boot">
+  <div class="win11-logo">
+    <div class="win11-logo-grid">
+      <div></div><div></div><div></div><div></div>
+    </div>
+    <div class="win11-spinner">
+      <div class="win11-dot"></div>
+      <div class="win11-dot"></div>
+      <div class="win11-dot"></div>
+      <div class="win11-dot"></div>
+      <div class="win11-dot"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── BIOS UI ── -->
+<div id="bios-ui" style="display:none;height:100vh;flex-direction:column">
+
+  <div class="bios-header">
+    <span>MAZE BIOS v2.0 — Maze Systems Inc.</span>
+    <span id="bios-clock">00:00:00</span>
+  </div>
+
+  <div class="bios-body">
+    <div class="bios-tabs">
+      <div style="color:#ffff00;font-size:11px;padding:4px 16px 8px;font-weight:bold">SETUP UTILITY</div>
+      <div class="bios-tab active" onclick="showTab('main',this)">Main</div>
+      <div class="bios-tab" onclick="showTab('advanced',this)">Advanced</div>
+      <div class="bios-tab" onclick="showTab('boot',this)">Boot</div>
+      <div class="bios-tab" onclick="showTab('security',this)">Security</div>
+      <div class="bios-tab" onclick="showTab('power',this)">Power</div>
+      <div class="bios-tab" onclick="showTab('exit',this)">Exit</div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="bios-panel active" id="tab-main">
+      <div class="bios-section-title">System Information</div>
+      <div class="bios-row"><span>BIOS Version</span><span class="bios-row-value">MAZE-BIOS 2.0.0</span></div>
+      <div class="bios-row"><span>Build Date</span><span class="bios-row-value">2025/01/01</span></div>
+      <div class="bios-row"><span>Platform</span><span class="bios-row-value" id="bi-platform">Detecting...</span></div>
+      <div class="bios-spacer"></div>
+      <div class="bios-section-title">Memory</div>
+      <div class="bios-row"><span>Total Memory</span><span class="bios-row-value" id="bi-mem">–</span></div>
+      <div class="bios-row"><span>Memory Speed</span><span class="bios-row-value">3200 MHz</span></div>
+      <div class="bios-row"><span>Memory Type</span><span class="bios-row-value">DDR4</span></div>
+      <div class="bios-spacer"></div>
+      <div class="bios-section-title">Date & Time</div>
+      <div class="bios-row"><span>System Time</span><span class="bios-row-value" id="bi-time">–</span></div>
+      <div class="bios-row"><span>System Date</span><span class="bios-row-value" id="bi-date">–</span></div>
+    </div>
+
+    <!-- ADVANCED -->
+    <div class="bios-panel" id="tab-advanced">
+      <div class="bios-section-title">CPU Configuration</div>
+      <div class="bios-row"><span>CPU Cores</span><span class="bios-row-value" id="bi-cpu">–</span></div>
+      <div class="bios-row"><span>Hyper-Threading</span><span class="bios-row-value toggle-val" onclick="toggleVal(this,['Enabled','Disabled'])">Enabled</span></div>
+      <div class="bios-row"><span>Turbo Boost</span><span class="bios-row-value toggle-val" onclick="toggleVal(this,['Enabled','Disabled'])">Enabled</span></div>
+      <div class="bios-row"><span>Virtualization (VT-x)</span><span class="bios-row-value toggle-val" onclick="toggleVal(this,['Enabled','Disabled'])">Enabled</span></div>
+      <div class="bios-spacer"></div>
+      <div class="bios-section-title">Storage</div>
+      <div class="bios-row"><span>SATA Mode</span><span class="bios-row-value toggle-val" onclick="toggleVal(this,['AHCI','IDE','RAID'])">AHCI</span></div>
+      <div class="bios-row"><span>NVMe Support</span><span class="bios-row-value toggle-val" onclick="toggleVal(this,['Enabled','Disabled'])">Enabled</span></div>
+    </div>
+
+    <!-- BOOT -->
+    <div class="bios-panel" id="tab-boot">
+      <div class="bios-section-title">Boot Priority</div>
+      <div class="bios-row" style="background:#0000aa"><span>1.</span><span class="bios-row-value">💾 Maze HD (NVMe)</span></div>
+      <div class="bios-row"><span>2.</span><span class="bios-row-value">💿 DVD Drive</span></div>
+      <div class="bios-row"><span>3.</span><span class="bios-row-value">🔌 USB Drive</span></div>
+      <div class="bios-row"><span>4.</span><span class="bios-row-value">🌐 Network (PXE)</span></div>
+      <div class="bios-spacer"></div>
+      <div class="bios-section-title">Boot Settings</div>
+      <div class="bios-row"><span>Default OS</span><span class="bios-row-value toggle-val" onclick="toggleVal(this,['Maze OS','Windows 11 (Maze)'])">Maze OS</span></div>
+      <div class="bios-row"><span>Fast Boot</span><span class="bios-row-value toggle-val" onclick="toggleVal(this,['Enabled','Disabled'])">Enabled</span></div>
+      <div class="bios-row"><span>Secure Boot</span><span class="bios-row-value toggle-val" onclick="toggleVal(this,['Enabled','Disabled'])">Enabled</span></div>
+      <div class="bios-row"><span>OS Picker Timeout</span><span class="bios-row-value toggle-val" onclick="toggleVal(this,['10s','20s','30s','Off'])">10s</span></div>
+      <div class="bios-spacer"></div>
+      <div style="padding:8px">
+        <button onclick="showOSPicker()" style="background:#c0c0c0;color:#000080;border:2px outset #fff;padding:6px 16px;font-family:inherit;font-weight:bold;cursor:pointer;font-size:13px">
+          ▶ Show OS Picker
+        </button>
+      </div>
+    </div>
+
+    <!-- SECURITY -->
+    <div class="bios-panel" id="tab-security">
+      <div class="bios-section-title">Security</div>
+      <div class="bios-row"><span>Supervisor Password</span><span class="bios-row-value">Not Set</span></div>
+      <div class="bios-row"><span>User Password</span><span class="bios-row-value">Not Set</span></div>
+      <div class="bios-spacer"></div>
+      <div class="bios-section-title">Trusted Platform</div>
+      <div class="bios-row"><span>TPM Device</span><span class="bios-row-value toggle-val" onclick="toggleVal(this,['Enabled','Disabled'])">Enabled</span></div>
+      <div class="bios-row"><span>TPM Version</span><span class="bios-row-value">2.0</span></div>
+      <div class="bios-row"><span>Secure Boot Keys</span><span class="bios-row-value">Standard</span></div>
+      <div class="bios-spacer"></div>
+      <div class="bios-section-title">Firmware</div>
+      <div class="bios-row"><span>UEFI Mode</span><span class="bios-row-value toggle-val" onclick="toggleVal(this,['UEFI','Legacy'])">UEFI</span></div>
+      <div class="bios-row"><span>CSM Support</span><span class="bios-row-value toggle-val" onclick="toggleVal(this,['Disabled','Enabled'])">Disabled</span></div>
+    </div>
+
+    <!-- POWER -->
+    <div class="bios-panel" id="tab-power">
+      <div class="bios-section-title">Power Management</div>
+      <div class="bios-row"><span>Power Profile</span><span class="bios-row-value toggle-val" onclick="toggleVal(this,['Balanced','Performance','Power Saver'])">Balanced</span></div>
+      <div class="bios-row"><span>Wake on LAN</span><span class="bios-row-value toggle-val" onclick="toggleVal(this,['Disabled','Enabled'])">Disabled</span></div>
+      <div class="bios-row"><span>Restore on AC Power</span><span class="bios-row-value toggle-val" onclick="toggleVal(this,['Last State','Always On','Always Off'])">Last State</span></div>
+      <div class="bios-spacer"></div>
+      <div class="bios-section-title">Fan Control</div>
+      <div class="bios-row"><span>CPU Fan Mode</span><span class="bios-row-value toggle-val" onclick="toggleVal(this,['Auto','Full Speed','Silent'])">Auto</span></div>
+      <div class="bios-row"><span>CPU Temperature</span><span class="bios-row-value" id="bi-temp">42°C</span></div>
+    </div>
+
+    <!-- EXIT -->
+    <div class="bios-panel" id="tab-exit">
+      <div class="bios-section-title">Exit Options</div>
+      <div class="bios-spacer"></div>
+      <div class="bios-row" style="cursor:pointer" onclick="saveAndExit()"><span>💾 Save Changes and Exit</span><span class="bios-row-value">Enter</span></div>
+      <div class="bios-row" style="cursor:pointer" onclick="discardAndExit()"><span>↩ Discard Changes and Exit</span><span class="bios-row-value">Esc</span></div>
+      <div class="bios-row" style="cursor:pointer" onclick="loadDefaults()"><span>🔄 Load Setup Defaults</span><span class="bios-row-value">F9</span></div>
+      <div class="bios-row" style="cursor:pointer" onclick="showOSPicker()"><span>▶ Boot — Show OS Picker</span><span class="bios-row-value">F10</span></div>
+      <div class="bios-spacer"></div>
+      <div style="padding:8px;color:#888;font-size:12px">Maze BIOS v2.0 — Copyright © 2025 Maze Systems Inc.</div>
+    </div>
+  </div>
+
+  <div class="bios-footer">
+    <span><span class="bios-key">↑↓</span> Select</span>
+    <span><span class="bios-key">Enter</span> Confirm</span>
+    <span><span class="bios-key">+/-</span> Change Value</span>
+    <span><span class="bios-key">F9</span> Defaults</span>
+    <span><span class="bios-key">F10</span> Boot</span>
+    <span><span class="bios-key">Esc</span> Exit</span>
+  </div>
+</div>
+
+<script>
+const { ipcRenderer } = require('electron');
+
+// ── POST SEQUENCE ──
+const postLines = [
+  { text:'MAZE BIOS v2.0 — Maze Systems Inc.', color:'#ffff00', delay:0 },
+  { text:'━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', delay:80 },
+  { text:'', delay:100 },
+  { text:'Initializing hardware...', delay:200 },
+  { text:'CPU: Maze Core Processor', delay:300 },
+  { text:'Memory test: ................ OK', color:'#00ff00', delay:500 },
+  { text:'', delay:600 },
+  { text:'Detecting storage devices...', delay:700 },
+  { text:'  [FOUND] NVMe SSD — Maze HD', color:'#00ff00', delay:900 },
+  { text:'  [FOUND] USB Controller', color:'#00ff00', delay:1000 },
+  { text:'', delay:1050 },
+  { text:'Loading UEFI drivers...', delay:1100 },
+  { text:'  Secure Boot: ENABLED', color:'#00ff00', delay:1200 },
+  { text:'  TPM 2.0: DETECTED', color:'#00ff00', delay:1350 },
+  { text:'', delay:1400 },
+  { text:'Press  DEL  or  F2  to enter BIOS Setup', color:'#ffff00', delay:1500 },
+  { text:'Press  F12  to select Boot Device', color:'#ffff00', delay:1600 },
+  { text:'', delay:1700 },
+  { text:'Loading OS Picker...', color:'#c0c0c0', delay:1800 },
+];
+
+const postEl = document.getElementById('post-screen');
+let postDone = false;
+
+postLines.forEach((line, i) => {
+  setTimeout(() => {
+    const div = document.createElement('div');
+    div.className = 'post-line';
+    div.style.color = line.color || '#c0c0c0';
+    div.textContent = line.text;
+    postEl.appendChild(div);
+
+    if (i === postLines.length - 1) {
+      setTimeout(() => {
+        if (!postDone) {
+          postDone = true;
+          showOSPicker();
+        }
+      }, 800);
+    }
+  }, line.delay);
+});
+
+// ── KEYBOARD ──
+document.addEventListener('keydown', e => {
+  const pickerOpen = document.getElementById('os-picker').classList.contains('open');
+
+  if ((e.key === 'Delete' || e.key === 'F2') && !postDone) {
+    postDone = true; openBIOS();
+  }
+
+  if (pickerOpen) {
+    if (e.key === 'ArrowLeft') selectOS('win');
+    if (e.key === 'ArrowRight') selectOS('maze');
+    if (e.key === 'Enter') bootOS(selectedOS);
+  }
+
+  if (e.key === 'F10') showOSPicker();
+  if (e.key === 'F9') loadDefaults();
+  if (e.key === 'Escape') discardAndExit();
+});
+
+// ── OS PICKER ──
+let selectedOS = 'maze';
+let pickerCountdown = 10;
+let pickerTimer = null;
+
+function showOSPicker() {
+  document.getElementById('post-screen').style.display = 'none';
+  document.getElementById('bios-ui').style.display = 'none';
+  document.getElementById('os-picker').classList.add('open');
+  startPickerCountdown();
+}
+
+function selectOS(os) {
+  selectedOS = os;
+  document.getElementById('opt-win').classList.toggle('selected', os === 'win');
+  document.getElementById('opt-maze').classList.toggle('selected', os === 'maze');
+  document.getElementById('picker-os-name').textContent =
+    os === 'win' ? 'Windows 11 (Maze Edition)' : 'Maze OS';
+  // Reset countdown on selection
+  pickerCountdown = 10;
+  document.getElementById('picker-timer').textContent = pickerCountdown;
+}
+
+function startPickerCountdown() {
+  pickerCountdown = 10;
+  document.getElementById('picker-timer').textContent = pickerCountdown;
+  pickerTimer = setInterval(() => {
+    pickerCountdown--;
+    document.getElementById('picker-timer').textContent = pickerCountdown;
+    if (pickerCountdown <= 0) {
+      clearInterval(pickerTimer);
+      bootOS(selectedOS);
+    }
+  }, 1000);
+}
+
+function bootOS(os) {
+  clearInterval(pickerTimer);
+  document.getElementById('os-picker').classList.remove('open');
+  if (os === 'win') {
+    bootWindows11();
+  } else {
+    bootMaze();
+  }
+}
+
+// ── BOOT MAZE ──
+function bootMaze() {
+  const boot = document.createElement('div');
+  boot.style.cssText = 'position:fixed;inset:0;background:#000;color:#c0c0c0;font-family:monospace;font-size:14px;padding:20px;display:flex;flex-direction:column;gap:6px;z-index:400';
+  boot.innerHTML = `
+    <div style="color:#ffff00;font-weight:bold">MAZE BIOS v2.0</div>
+    <div style="height:1px;background:#444;margin:4px 0"></div>
+    <div>Booting from: Maze HD (NVMe)</div>
+    <div style="margin-top:8px;color:#00ff00">Loading Maze OS... <span class="blink">_</span></div>
+  `;
+  document.body.appendChild(boot);
+  setTimeout(() => ipcRenderer.send('boot-complete'), 1800);
+}
+
+// ── BOOT WINDOWS 11 ──
+function bootWindows11() {
+  const win = document.getElementById('win11-boot');
+  win.classList.add('open');
+  // After Windows 11 "boot" animation, load the Win11 desktop
+  setTimeout(() => {
+    ipcRenderer.send('boot-windows');
+  }, 3500);
+}
+
+// ── OPEN BIOS ──
+function openBIOS() {
+  document.getElementById('post-screen').style.display = 'none';
+  document.getElementById('bios-ui').style.display = 'flex';
+  loadSystemInfo();
+  startBIOSClock();
+}
+
+// ── TABS ──
+function showTab(name, el) {
+  document.querySelectorAll('.bios-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.bios-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  el.classList.add('active');
+}
+
+function toggleVal(el, options) {
+  const cur = options.indexOf(el.textContent);
+  el.textContent = options[(cur + 1) % options.length];
+}
+
+async function loadSystemInfo() {
+  try {
+    const info = await ipcRenderer.invoke('get-system-info');
+    document.getElementById('bi-platform').textContent = info.platform.toUpperCase() + ' ' + info.arch;
+    document.getElementById('bi-mem').textContent = info.totalMemory;
+    document.getElementById('bi-cpu').textContent = info.cpus + ' Cores';
+  } catch(e) {}
+}
+
+function startBIOSClock() {
+  function tick() {
+    const now = new Date();
+    const t = now.toTimeString().split(' ')[0];
+    const d = now.toLocaleDateString('en-US',{year:'numeric',month:'2-digit',day:'2-digit'});
+    const cl = document.getElementById('bios-clock');
+    const bt = document.getElementById('bi-time');
+    const bd = document.getElementById('bi-date');
+    const tmp = document.getElementById('bi-temp');
+    if (cl) cl.textContent = t;
+    if (bt) bt.textContent = t;
+    if (bd) bd.textContent = d;
+    if (tmp) tmp.textContent = (40 + Math.floor(Math.random() * 8)) + '°C';
+  }
+  tick(); setInterval(tick, 1000);
+}
+
+function saveAndExit() { showStatusMsg('Settings saved.'); setTimeout(showOSPicker, 800); }
+function discardAndExit() { showStatusMsg('Discarding changes...'); setTimeout(showOSPicker, 800); }
+function loadDefaults() { showStatusMsg('Defaults loaded.'); }
+
+function showStatusMsg(msg) {
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;bottom:44px;left:50%;transform:translateX(-50%);background:#ffff00;color:#000080;padding:6px 20px;font-weight:bold;font-size:13px;border:2px solid #000080;z-index:999';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1500);
+}
+</script>
+</body>
+</html>

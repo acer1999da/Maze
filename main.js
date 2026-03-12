@@ -116,3 +116,8 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
+
+// Windows 11 boot handler
+ipcMain.on('boot-windows', () => {
+  mainWindow.loadFile(path.join(__dirname, 'GUI', 'Html', 'windows.html'));
+});

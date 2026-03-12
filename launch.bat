@@ -1,38 +1,52 @@
 @echo off
-title MAZE-TERMINAL
+title Maze-Terminal
 color 2
-echo loading...
+
+echo Mounted Launcher...
 timeout /t 1 /nobreak > NUL
-echo loading...
+echo Mounting drives...
 timeout /t 1 /nobreak > NUL
-echo loading...
+echo Mounting GUI and files...
 timeout /t 1 /nobreak > NUL
 
-title GNU TERMUX
+cls
+title GNUX Terminal V2
 echo.
-echo  ███╗   ███╗ █████╗ ███████╗███████╗
-echo  ████╗ ████║██╔══██╗╚══███╔╝██╔════╝
-echo  ██╔████╔██║███████║  ███╔╝ █████╗
-echo  ██║╚██╔╝██║██╔══██║ ███╔╝  ██╔══╝
-echo  ██║ ╚═╝ ██║██║  ██║███████╗███████╗
-echo  ╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝
+echo  ================================
+echo          GNUX TERMINAL
+echo  ================================
 echo.
-echo  Welcome to GNU TERMUX
-echo.
-echo  1. Launch Maze
+echo  1. Start Maze OS
 echo  2. Exit
 echo.
-set /p option=  Enter your choice: 
-if "%option%"=="1" (
-    echo. & echo  Launching Maze...
-    timeout /t 1 /nobreak > NUL
-    call npm start
-) else if "%option%"=="2" (
-    echo. & echo  Exiting...
-    timeout /t 1 /nobreak > NUL
-    exit
-) else (
-    echo. & echo  Invalid option.
-    timeout /t 2 /nobreak > NUL
-    call %0
-)
+set /p option=  Choose an option: 
+
+if "%option%"=="1" goto open
+if "%option%"=="2" goto leave
+goto invalid
+
+:open
+cls
+echo.
+echo  Welcome to Maze OS!
+echo  Enjoy your OS!
+echo.
+timeout /t 1 /nobreak > NUL
+call npm start
+pause
+exit
+
+:leave
+cls
+echo.
+echo  Thank you for using Maze OS!
+echo  Goodbye!
+echo.
+timeout /t 1 /nobreak > NUL
+exit
+
+:invalid
+echo.
+echo  Invalid option. Please try again.
+timeout /t 2 /nobreak > NUL
+call %0
