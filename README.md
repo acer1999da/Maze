@@ -1,7 +1,7 @@
 # Maze OS
 > A macOS-inspired desktop environment built with Electron.
 
-![Version](https://img.shields.io/badge/version-2.1-blue)
+![Version](https://img.shields.io/badge/version-2.2-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 ![Open Source](https://img.shields.io/badge/open%20source-yes-brightgreen)
